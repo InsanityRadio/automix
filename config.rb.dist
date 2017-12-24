@@ -1,0 +1,6 @@
+$database_opts = {:host => '127.0.0.1', :username => 'root', :password => '', :database => 'link_history', :reconnect => true}
+
+# This should match our nginx configuration
+$TOKEN = "103210321032"
+
+$IP = '10.0.0.1'

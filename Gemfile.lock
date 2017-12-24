@@ -1,0 +1,28 @@
+GIT
+  remote: https://github.com/shellixyz/rjoystick.git
+  revision: c8bb0341466d828c0ea92e6a7d32278a6e6c56e6
+  specs:
+    rjoystick (0.1.1)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    em-websocket (0.5.1)
+      eventmachine (>= 0.12.9)
+      http_parser.rb (~> 0.6.0)
+    eventmachine (1.2.5)
+    http_parser.rb (0.6.0)
+    libatem (0.0.1)
+    mysql2 (0.4.9)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  em-websocket
+  libatem
+  mysql2
+  rjoystick!
+
+BUNDLED WITH
+   1.15.4

@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>GoggleBox</title>
+		<meta name="viewport" content="width=device-width" />
+		<style type="text/css">
+
+			* {
+				margin: 0;
+				padding: 0;
+			}
+
+			html, body {
+				background: #000;
+				height: 100%;
+				font-size: 14pt;
+				font-family: "Helvetica Neue", Arial, Verdana, sans-serif;
+				font-weight: 300;
+			}
+
+			.container {
+				display: flex;
+				height: 80%;
+				margin-top: 10vh;
+				float: left;
+				width: 100%;
+				flex-direction: column;
+				justify-content: space-around;
+			}
+
+			.row {
+				display: flex;
+				justify-content: space-around;
+				text-align: center;
+				width: 90%;
+				margin: 0 auto;
+			}
+
+			.button {
+				background: none;
+				border: 3px solid #FFF;
+				border-radius: 900px;
+				color: #FFF;
+				font-size: 14pt;
+				font-family: "Helvetica Neue", Arial, Verdana, sans-serif;
+				font-weight: 300;
+				position: relative;
+				margin: 5px;
+
+				padding: 25px 10px;
+				width: 200px;
+				transition: all 0.05s;
+			}
+
+			.button:hover {
+				opacity: 0.9;
+			}
+
+			.button.onair, .button.onair.preview {
+				border-color: #F33;
+				color: #F99;
+			}
+
+			.button.onair:before, .button.preview:before {
+				background: #C00;
+				content: "ON AIR";
+				color: #FFF;
+				display: block;
+				position: absolute;
+				font-size: 9pt;
+				top: -35px;
+				left: 50%;
+				width: 65px;
+				text-align: center;
+				margin-left: -32.5px;
+				padding: 3px 0;
+				border-radius: 1px;
+			}
+
+			.button.preview:before {
+				content: "PREVIEW";
+				background: #090;
+			}
+
+			.button.preview {
+				border-color: #5F5;
+				color: #5F5;
+			}
+
+			.button.onair.preview:before {
+				background: linear-gradient(to right, #090 53.0%, #000 53.0001%, #000 56.9999%, #C00 57%);
+				content: "PREVIEW\00a0\00a0 \00a0\00a0ON AIR";
+				width: 115px;
+				margin-left: -57.5px;
+			}
+
+			.auto, .auto2 {
+				position: absolute;
+				right: 20px;
+				top: 20px;
+				color: #FFF;
+			}
+
+			.auto2 {
+				right: 200px;
+			}
+
+			.toggle {
+				position: absolute;
+				margin-left: -9999px;
+				visibility: hidden;
+			}
+			.toggle + label {
+				display: block;
+				position: relative;
+				cursor: pointer;
+				outline: none;
+				user-select: none;
+			}
+
+			input.toggle-round-flat + label {
+				padding: 2px;
+				width: 120px;
+				height: 60px;
+				background-color: #dddddd;
+				border-radius: 60px;
+				transition: background 0.4s;
+			}
+			input.toggle-round-flat + label:before,
+			input.toggle-round-flat + label:after {
+				display: block;
+				position: absolute;
+				content: "";
+				z-index: 5;
+			}
+			input.toggle-round-flat + label:before {
+				top: 3px;
+				left: 3px;
+				bottom: 3px;
+				right: 3px;
+				background-color: #000;
+				border-radius: 60px;
+				transition: background 0.4s;
+			}
+			input.toggle-round-flat + label:after {
+				top: 7px;
+				left: 7px;
+				bottom: 7px;
+				width: 52px;
+				background-color: #dddddd;
+				border-radius: 52px;
+				transition: margin 0.2s, background 0.2s;
+			}
+			input.toggle-round-flat:checked + label {
+				background-color: #8ce196;
+			}
+			input.toggle-round-flat:checked + label:after {
+				margin-left: 57px;
+				background-color: #8ce196;
+			}
+
+			input.toggle + label span {
+				position: relative;
+				z-index: 5;
+				top: 20px;
+				left: 0px;
+			}
+
+			input.toggle + label span:before {
+				content: "Auto";
+				position: absolute;
+				left: 18px;
+				top: 15px;
+			}
+
+			input.toggle + label span:after {
+				content: "Manual";
+				position: absolute;
+				font-size: 12pt;
+				left: 62px;
+				top: 19px;
+			}
+
+			.auto2 input.toggle + label span:before {
+				content: "Slate";
+				font-size: 11.5pt;
+				top: 20px;
+			}
+
+			.auto2 input.toggle + label span:after {
+				content: "Wide";
+				left: 65px;
+			}
+
+			.mode-auto button {
+				opacity: 0.3;
+				pointer-events: none;
+				-moz-pointer-events: none;
+				-webkit-pointer-events: none;
+			}
+
+			@media screen and (max-width: 400px) {
+				.auto {
+					transform: scale(0.8);
+					right: 0;
+					top: 5px;
+				}
+				.button {
+					font-size: 10pt;
+				}
+			}
+
+		</style>
+		<script type="text/javascript">
+			var reflow = function () {
+				document.body.classList[document.getElementById('autopilot').checked ? 'add' : 'remove']('mode-auto');
+			}
+
+			var Mixer = function () {
+
+				var ws = null;
+				this._pgm = this._prev = null;
+				this._auto = false;
+
+				this.connect = function () {
+					if (ws) ws.close();
+					// TODO, fix this freaking auto
+					// too little time to do it right now
+					ws = new WebSocket('ws://10.32.0.125:9292/_backend');
+					ws.onmessage = function (e) {
+						var m = JSON.parse(e.data);
+						console.log('WS MESSAGE', m)
+						switch (m.c) {
+							case 'c':
+								return setCameras(m.d);
+							case 'a':
+								return setAuto(m.d);
+							case 'a2':
+								return setAuto2(m.d);
+							case 'pgm':
+								return setPGM(m.d);
+							case 'prev':
+								return setPrev(m.d);
+							break;
+						}
+					}.bind(this)
+
+					ws.onclose = function () {
+						this.connect();
+					}.bind(this)
+				}
+
+				this.pgm = function (camera) {
+					console.log('Setting PGM', camera)
+					ws.send(JSON.stringify({ c: 'pgm', d: camera }));
+				}
+
+				this.prev = function (camera) {
+					console.log('Setting preview', camera);
+					ws.send(JSON.stringify({ c: 'prev', d: camera }));
+				}
+
+				this.auto = function (mode) {
+					console.log('Setting auto', mode)
+					ws.send(JSON.stringify({ c: 'a', d: !!mode }));
+				}
+
+				this.auto2 = function (mode) {
+					console.log('Setting auto2', mode)
+					ws.send(JSON.stringify({ c: 'a2', d: !!mode }));
+				}
+
+				var setAuto = function (mode) {
+					this._auto = mode;
+					auto.checked = mode;
+					reflow();
+				}.bind(this)
+
+				var setAuto2 = function (mode) {
+					this._auto2 = mode;
+					auto2.checked = mode;
+					reflow();
+				}.bind(this)
+
+				var setPGM = function (camera) {
+					this._pgm = camera;
+					for (var i in buttons) {
+						buttons[i].classList[camera == i ? 'add' : 'remove']('onair');
+					}
+				}.bind(this)
+
+				var setPrev = function (camera) {
+					this._prev = camera;
+					for (var i in buttons) {
+						buttons[i].classList[camera == i ? 'add' : 'remove']('preview');
+					}
+				}.bind(this)
+
+				var click = function (camera) {
+					if (this._pgm == camera || this._auto) {
+						console.log('oh')
+						return;
+					}
+					// One click sets prev, two sets PGM
+					if (this._prev == camera) {
+						console.log('wee')
+						this.pgm(camera)
+					} else {
+						this.prev(camera);
+					}
+				}.bind(this);
+
+				var clickAuto = function (auto) {
+					this.auto(auto);
+				}.bind(this)
+
+				var clickAuto2 = function (auto) {
+					this.auto2(auto);
+				}.bind(this)
+
+				var buttons = {}, auto = document.getElementById('autopilot'), auto2 = document.getElementById('autobreak');
+
+				[].forEach.call(document.querySelectorAll(".button.mix"), function (camera) {
+					buttons[camera.dataset.name] = camera;
+					camera.addEventListener("click", function () {
+						click(camera.dataset.name);
+					});
+				});
+
+				auto.addEventListener("change", function () {
+					clickAuto(auto.checked);
+				})
+
+				auto2.addEventListener("change", function () {
+					clickAuto2(auto2.checked);
+				})
+
+				this.connect();
+
+			}
+
+			window.addEventListener("load", function () {
+				reflow();
+				window.mixer = new Mixer();
+			})
+		</script>
+	</head>
+	<body class="mode-auto">
+
+		<div class="auto">
+			<input id="autopilot" onchange="reflow()" type="checkbox" class="toggle toggle-round-flat" />
+			<label for="autopilot"><span></span></label>
+		</div>
+
+		<div class="auto2">
+			<input id="autobreak" type="checkbox" class="toggle toggle-round-flat" />
+			<label for="autobreak"><span></span></label>
+		</div>
+
+		<div class="container">
+
+			<div class="row">
+				<button class="button mix" data-name="Wide">
+					Wide Angle
+				</button>
+
+				<button class="button mix" data-name="Pres">
+					Presenter
+				</button>
+
+				<button class="button mix" data-name="Gst">
+					Guest
+				</button>
+			</div>
+
+			<div class="row">
+				<button class="button mix" data-name="MP1">
+					Logo / Slate
+				</button>
+
+				<button class="button mix" data-name="VT1">
+					Video Tape
+				</button>
+
+				<button class="button mix" data-name="black">
+					Black Screen
+				</button>
+			</div>
+
+		</div>
+
+	</body>
+</html>
